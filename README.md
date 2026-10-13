@@ -4,7 +4,7 @@
 >
 > 以日文 VTuber 長直播為輸入，逐步建立「轉錄 → 聲音分析 → 事件分段 → 三輪選片 → 人工審核 → Shorts 輸出 → 成效回饋」的可擴充系統。
 
-**專案狀態：v0.1.0 — Transcript MVP**。目前實作的是可執行的 **日文轉錄 CLI、JSON / SRT 輸出、格式驗證與基本測試**。選片 Agent、聲音分析、影片渲染及平台 API 尚未實作；見 [開發路線圖](docs/roadmap.md)。
+**專案狀態：v0.2.0 — Transcript-only Selection Baseline**。提供日文轉錄、JSON / SRT 輸入的本機候選事件搜尋、三輪 Prompt 匯出與事件／候選格式驗證。三輪 LLM 自動執行、聲音分析、影片渲染及平台 API 尚未實作；見 [開發路線圖](docs/roadmap.md)。
 
 ## 目標
 
@@ -61,9 +61,42 @@ python -m pytest -q
 ```text
 vtuber-shorts transcribe          將輸入音訊／影片轉成 JSON（可選 SRT）
 vtuber-shorts validate-transcript 驗證現有 JSON 格式與時間戳
+vtuber-shorts discover-events     從 JSON / SRT 搜尋文字線索候選事件
+vtuber-shorts prepare-prompts     匯出三輪 Prompt、schema 與重疊逐字稿分塊
+vtuber-shorts validate-selection  驗證 events / candidates JSON
 ```
 
 執行 `vtuber-shorts transcribe --help` 可看可用參數。預設日文 `language=ja`，可加 `--vad-filter` 啟用可選 VAD，或用 `--overwrite` 覆寫既有輸出。時間戳單位為**相對原始影音開頭的秒數**。
+
+## v0.2 純文字選片基準
+
+已有 JSON 或 SRT 時，只需安裝 `pip install -e ".[dev]"`，不需要下載語音模型。
+以下使用公開的虛構範例；未啟用虛擬環境時，將指令換成 `.\.venv\Scripts\vtuber-shorts.exe`。
+
+```powershell
+vtuber-shorts discover-events --input examples/transcript.example.json --output data/demo/events.json
+vtuber-shorts validate-selection --kind events --input data/demo/events.json --transcript examples/transcript.example.json
+vtuber-shorts prepare-prompts --input examples/transcript.example.json --output data/demo/prompts.json
+vtuber-shorts validate-selection --input examples/candidates.example.json --transcript examples/transcript.example.json
+```
+
+`discover-events` 依字幕間隔（預設超過 3 秒）與段落長度（預設最多 90 秒，
+單一字幕不切斷）聚合段落，搜尋問句、驚訝詞、故事詞、轉折詞與笑聲文字。
+以不同線索類別數量排序，同分依原始時間排序，預設最多 20 個事件。
+`summary` 是原字幕節錄；`priority` 是線索類別數，**不是有趣程度或情緒評分**。
+可設定 `--gap-seconds`、`--max-event-seconds`、`--context-seconds`、`--max-events`。
+沒有線索時合法輸出空事件；此基準可能漏掉安靜、隱含或依賴畫面的好片段。
+事件尚未確認語意完整，也不是最終 30–40 秒裁切。
+
+`prepare-prompts` 預設以 600 秒分塊、重疊 60 秒，保留完整字幕與原始時間戳，
+可設定 `--chunk-seconds`、`--overlap-seconds`。匯出包含三輪指令、事件與候選 schema，
+及第一輪逐字稿輸入；沒有呼叫模型或上傳資料。
+後續實驗需自行逐塊執行第一輪、依時間與引用合併重複事件，再提供原始上下文給
+第二輪，將可剪片段交給第三輪。模型產出需驗證並人工審核；詳見 [Prompt 說明](prompts/README.md)。
+
+SRT 來源沒有完整媒體時長，匯入時以最後一筆字幕的結束時間作為可用時間上限，
+`source_media` 使用 SRT 檔名。字幕序號會重新編成唯一段落 ID；所有分析保留原始秒數。
+新指令預設拒絕覆寫輸出，加 `--overwrite` 可覆寫，但禁止輸出覆蓋輸入。
 
 ## 預計架構（未實作部分為設計目標）
 
@@ -74,7 +107,9 @@ Local MP4
           ↓
     Event Segmentation (planned)
           ↓
-    Three-round Clip Selection (planned)
+    Transcript-only Events + Three-round Prompt Export (v0.2 ✅)
+          ↓
+    Automated Three-round Clip Selection (planned)
           ↓
     Candidate JSON → Human Review (planned)
           ↓
@@ -88,7 +123,7 @@ Local MP4
 ## Repo 主要資料夾
 
 ```text
-src/vtuber_shorts_agent/  真正的 Python 套件，v0.1 可執行程式
+src/vtuber_shorts_agent/  Python 套件，含 v0.1 轉錄與 v0.2 純文字基準
 examples/                 虛構、可公開的 JSON 範例
 docs/                     架構、資料契約、路線圖與評估方法
 tests/                    自動化測試

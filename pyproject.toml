@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vtuber-shorts-agent"
-version = "0.1.0"
-description = "Modular pipeline for Japanese VTuber stream transcription and future Shorts discovery"
+version = "0.2.0"
+description = "Japanese VTuber transcription and offline transcript-only Shorts event discovery"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "VTuber Shorts Agent contributors"}]
-dependencies = []
+dependencies = [
+    "faster-whisper",
+    "av>=11,<19",
+]
 
 [project.optional-dependencies]
 transcribe = ["faster-whisper>=1.1,<3"]
@@ -20,6 +23,9 @@ vtuber-shorts = "vtuber_shorts_agent.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+vtuber_shorts_agent = ["resources/*.md", "resources/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

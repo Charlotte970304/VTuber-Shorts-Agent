@@ -51,3 +51,87 @@ def validate_transcript(payload: dict[str, Any]) -> None:
                 word_end = _finite_number(word.get("end"), "word.end")
                 if word_start < 0 or word_end < word_start:
                     raise ValueError(f"Invalid word timestamps at segment {index}")
+
+
+def validate_selection(
+    payload: dict[str, Any], *, kind: str = "candidates",
+    transcript: dict[str, Any] | None = None,
+) -> None:
+    """Validate event/candidate artifacts, optionally checking source evidence."""
+    if kind not in ("events", "candidates"):
+        raise ValueError("Unknown selection kind")
+    if payload.get("schema_version") != "1.0":
+        raise ValueError("Unsupported schema_version (expected '1.0')")
+    for field in ("source_media", "selection_strategy"):
+        if not isinstance(payload.get(field), str) or not payload[field].strip():
+            raise ValueError(f"{field} must be a non-empty string")
+    if not isinstance(payload.get(kind), list):
+        raise ValueError(f"{kind} must be an array")
+    duration = None
+    if "duration_seconds" in payload:
+        duration = _finite_number(payload["duration_seconds"], "duration_seconds")
+        if duration <= 0:
+            raise ValueError("duration_seconds must be positive")
+    source_rows = None
+    if transcript is not None:
+        validate_transcript(transcript)
+        if transcript["source_media"] != payload["source_media"]:
+            raise ValueError("Selection and transcript source_media must match")
+        if duration is not None and duration != transcript["duration_seconds"]:
+            raise ValueError("Selection and transcript duration_seconds must match")
+        duration = transcript["duration_seconds"]
+        source_rows = {row["id"]: row for row in transcript["segments"]}
+        if len(source_rows) != len(transcript["segments"]):
+            raise ValueError("Transcript segment IDs must be unique")
+    ids = set()
+    for index, row in enumerate(payload[kind]):
+        if not isinstance(row, dict):
+            raise ValueError(f"{kind}[{index}] must be an object")
+        identifier = row.get("id")
+        if not isinstance(identifier, str) or not identifier or identifier in ids:
+            raise ValueError("Selection IDs must be unique non-empty strings")
+        ids.add(identifier)
+        start, end, context_start, context_end = (
+            _finite_number(row.get(field), field)
+            for field in ("start", "end", "context_start", "context_end")
+        )
+        if not 0 <= context_start <= start < end <= context_end:
+            raise ValueError(f"Invalid selection time range at {identifier}")
+        if duration is not None and context_end > duration:
+            raise ValueError(f"Selection exceeds source duration at {identifier}")
+        fields = ("summary", "interesting_reason") if kind == "events" else (
+            "reason", "hook_suggestion")
+        for field in fields:
+            if not isinstance(row.get(field), str) or not row[field].strip():
+                raise ValueError(f"{field} must be a non-empty string")
+        evidence = row.get("evidence_segment_ids")
+        if (not isinstance(evidence, list) or not evidence
+                or any(isinstance(item, bool) or not isinstance(item, int) for item in evidence)
+                or len(evidence) != len(set(evidence))):
+            raise ValueError("evidence_segment_ids must contain unique integer IDs")
+        if source_rows is not None:
+            for segment_id in evidence:
+                if segment_id not in source_rows:
+                    raise ValueError(f"Unknown evidence segment ID: {segment_id}")
+                segment = source_rows[segment_id]
+                if segment["end"] <= context_start or segment["start"] >= context_end:
+                    raise ValueError("Evidence must overlap the context range")
+        if kind == "events":
+            if not isinstance(row.get("needs_more_context"), bool):
+                raise ValueError("needs_more_context must be a boolean")
+        else:
+            if row.get("review_status") not in ("pending", "approved", "rejected"):
+                raise ValueError("Invalid review_status")
+            if "scores" not in row:
+                raise ValueError("scores is required (use null when unscored)")
+            scores = row.get("scores")
+            if scores is not None:
+                if not isinstance(scores, dict):
+                    raise ValueError("scores must be an object or null")
+                for field in ("hook", "understandability", "personality", "payoff", "clipability"):
+                    score = _finite_number(scores.get(field), f"scores.{field}")
+                    if not 1 <= score <= 5:
+                        raise ValueError("Scores must be between 1 and 5")
+                if (not isinstance(row.get("score_rubric_version"), str)
+                        or not row["score_rubric_version"].strip()):
+                    raise ValueError("Scored candidates require score_rubric_version")

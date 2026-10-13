@@ -5,7 +5,7 @@
 | 版本 | 狀態 | 完成定義（Definition of Done） |
 |---|---|---|
 | v0.1 | ✅ scaffold + transcript CLI | MP4 可轉為 JSON / SRT；格式驗證、單元測試、CI |
-| v0.2 | planned | SRT / JSON 純文字候選事件搜尋；三輪 prompt 初版；JSON schema |
+| v0.2 | ✅ transcript-only baseline | SRT / JSON 文字線索候選事件搜尋；三輪 prompt 初版與重疊分塊匯出；事件／候選 JSON schema 與驗證。尚未自動執行 LLM |
 | v0.3 | planned | 基本聲學特徵：RMS、停頓、pitch（可靠時）、時窗；保留模型/單位 |
 | v0.4 | planned | 事件分段、文字與聲音特徵整合、三輪比較和候選片段排序 |
 | v0.5 | planned | 候選片段預覽、核准/拒絕、標籤與原因記錄 |
@@ -18,10 +18,12 @@
 
 - [ ] `feat: benchmark Japanese transcript accuracy` — 以合法短片驗證時戳、擬聲詞、台詞誤差。
 - [ ] `feat: transcript chunk checkpointing` — 長直播中途失敗可續跑。
-- [ ] `feat: round-1 text-based event discovery` — 不使用聲音，先產出多個候選事件。
-- [ ] `test: candidate JSON validation` — 把時間範圍和理由欄位視為 contract。
+- [x] `feat: round-1 text-based event discovery` — v0.2 本機文字線索基準，產出候選事件；語意模型待後續實驗。
+- [x] `test: candidate JSON validation` — 時間範圍、上下文、理由、引用與評分驗證。
 - [ ] `feat: review labels and score rubric` — 對候選片段建立人工黃金資料集。
 - [ ] `experiment: transcript-only baseline` — 建立聲音模型加入前的基準成效。
+
+v0.2 完成工具與測試，不代表已完成真實直播的人工評估或品質實驗。
 
 ## 不要過早投入
 

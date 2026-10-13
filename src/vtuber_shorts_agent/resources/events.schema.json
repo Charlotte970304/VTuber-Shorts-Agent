@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "events 1.0",
+  "type": "object",
+  "description": "Use validate-selection for time containment, unique IDs and optional transcript evidence checks.",
+  "required": [
+    "schema_version",
+    "source_media",
+    "selection_strategy",
+    "events"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "source_media": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selection_strategy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "start",
+          "end",
+          "context_start",
+          "context_end",
+          "evidence_segment_ids",
+          "summary",
+          "interesting_reason",
+          "needs_more_context"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "minimum": 0
+          },
+          "context_start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "context_end": {
+            "type": "number",
+            "minimum": 0
+          },
+          "evidence_segment_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer"
+            }
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "interesting_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "needs_more_context": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

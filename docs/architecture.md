@@ -37,7 +37,7 @@
 | 模組 | 輸入 | 輸出 | 版本 |
 |---|---|---|---|
 | Transcription | 本機影音 | 帶時間戳逐字稿 JSON / SRT | v0.1 已完成 |
-| Text-based Clip Selection | Transcript | 候選事件 | v0.2 planned |
+| Text-based Clip Selection | JSON / SRT | 文字線索候選事件、三輪 Prompt 實驗輸入 | v0.2 已完成本機基準；LLM 自動執行未實作 |
 | Audio Analysis | 音軌 | Audio Features | v0.3 planned |
 | Event Segmentation | 台詞 + 聲音特徵 | Events | v0.4 planned |
 | Three-round Selection | 事件 + 前後文 | Candidates | v0.4 planned |
@@ -55,7 +55,7 @@
 - 模型與 Prompt 版本必須記錄，避免無法重現。
 - 不提前引入龐大 Agent 框架；流程穩定後再導入重試、快取與任務編排。
 - 同一個 `transcript.json` 可以重跑不同選片策略，而不必重做語音轉錄。
-- v0.1 只提供 `transcribe` 及 `validate-transcript`；不存在尚未完成的假命令。
+- v0.1 提供轉錄與驗證；v0.2 增加 `discover-events`、`prepare-prompts`、`validate-selection`。Prompt 匯出與實際模型執行分開。
 
 ## 資料儲存
 

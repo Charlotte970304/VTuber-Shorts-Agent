@@ -1,4 +1,4 @@
-"""Minimal command-line interface; planned features are intentionally absent."""
+"""Transcription, offline event discovery and manual experiment CLI."""
 
 import argparse
 import json
@@ -6,8 +6,10 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .contracts import validate_transcript
+from .contracts import validate_selection, validate_transcript
 from .io_utils import read_json, write_json
+from .prompting import prepare_prompts
+from .selection import discover_events, load_transcript
 from .srt import to_srt
 from .transcribe import transcribe_media
 
@@ -30,6 +32,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = commands.add_parser("validate-transcript", help="Validate transcript JSON")
     validate.add_argument("--input", type=Path, required=True)
+    discover = commands.add_parser("discover-events", help="Local JSON/SRT text-cue baseline")
+    discover.add_argument("--input", type=Path, required=True)
+    discover.add_argument("--output", type=Path, required=True)
+    discover.add_argument("--gap-seconds", type=float, default=3)
+    discover.add_argument("--max-event-seconds", type=float, default=90)
+    discover.add_argument("--context-seconds", type=float, default=15)
+    discover.add_argument("--max-events", type=int, default=20)
+    discover.add_argument("--overwrite", action="store_true")
+    prompts = commands.add_parser("prepare-prompts", help="Export three-round experiment inputs")
+    prompts.add_argument("--input", type=Path, required=True)
+    prompts.add_argument("--output", type=Path, required=True)
+    prompts.add_argument("--chunk-seconds", type=float, default=600)
+    prompts.add_argument("--overlap-seconds", type=float, default=60)
+    prompts.add_argument("--overwrite", action="store_true")
+    selection = commands.add_parser("validate-selection", help="Validate events/candidates JSON")
+    selection.add_argument("--input", type=Path, required=True)
+    selection.add_argument("--kind", choices=("events", "candidates"), default="candidates")
+    selection.add_argument("--transcript", type=Path, help="Optional JSON/SRT evidence source")
     return parser
 
 
@@ -40,6 +60,33 @@ def main(argv: list[str] | None = None) -> int:
             data = read_json(args.input)
             validate_transcript(data)
             print(f"Valid transcript: {len(data['segments'])} segments")
+            return 0
+
+        if args.command == "validate-selection":
+            data = read_json(args.input)
+            source = load_transcript(args.transcript) if args.transcript else None
+            validate_selection(data, kind=args.kind, transcript=source)
+            print(f"Valid {args.kind}: {len(data[args.kind])} items")
+            return 0
+
+        if args.command in ("discover-events", "prepare-prompts"):
+            if args.input.resolve() == args.output.resolve():
+                raise ValueError("Input and output paths must be different")
+            if args.output.exists() and not args.overwrite:
+                raise FileExistsError(f"Output exists: {args.output} (use --overwrite)")
+            transcript = load_transcript(args.input)
+            if args.command == "discover-events":
+                data = discover_events(
+                    transcript, gap_seconds=args.gap_seconds,
+                    max_event_seconds=args.max_event_seconds,
+                    context_seconds=args.context_seconds, max_events=args.max_events,
+                )
+                validate_selection(data, kind="events", transcript=transcript)
+            else:
+                data = prepare_prompts(transcript, chunk_seconds=args.chunk_seconds,
+                                       overlap_seconds=args.overlap_seconds)
+            write_json(args.output, data)
+            print(f"Saved: {args.output}")
             return 0
 
         outputs = [args.output]
