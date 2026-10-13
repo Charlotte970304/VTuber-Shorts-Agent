@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "source_media": "sample_local.mp4",
+  "duration_seconds": 20.0,
+  "language": "ja",
+  "created_at_utc": "2026-10-13T00:00:00+00:00",
+  "model": {
+    "name": "example-not-a-real-run",
+    "backend": "example",
+    "device": "cpu",
+    "compute_type": "int8",
+    "vad_filter": false,
+    "word_timestamps": false
+  },
+  "segments": [
+    {
+      "id": 1,
+      "start": 2.0,
+      "end": 4.8,
+      "text": "今日はちょっと面白いことがあったんだ。",
+      "words": null
+    },
+    {
+      "id": 2,
+      "start": 5.2,
+      "end": 8.6,
+      "text": "えっ、そんなことある？",
+      "words": null
+    }
+  ]
+}

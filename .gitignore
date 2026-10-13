@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Local credentials and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local input and generated artifacts
+/input/*
+!/input/.gitkeep
+/data/*
+!/data/.gitkeep
+/output/*
+!/output/.gitkeep
+/models/
+/cache/
+*.sqlite
+*.sqlite3
+*.db
+
+# Media: never commit source broadcasts or edited clips
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.mp3
+*.m4a
+*.wav
+*.flac
+*.srt
+*.ass
+*.vtt
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "source_media": "sample_local.mp4",
+  "generated_by": "example-only-not-implemented",
+  "feature_definitions": {
+    "rms": "root mean square amplitude; unnormalized"
+  },
+  "windows": [
+    {
+      "start": 2.0,
+      "end": 4.0,
+      "rms": 0.08,
+      "pitch_median_hz": null,
+      "speech_detected": null,
+      "laughter_probability": null
+    }
+  ]
+}

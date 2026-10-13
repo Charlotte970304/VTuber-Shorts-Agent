@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "source_media": "sample_local.mp4",
+  "selection_strategy": "example-only-not-implemented",
+  "candidates": [
+    {
+      "id": "demo-001",
+      "start": 2.0,
+      "end": 8.6,
+      "context_start": 0.0,
+      "context_end": 12.0,
+      "reason": "A self-contained small surprise; dummy text for a schema example.",
+      "hook_suggestion": "Begin with the surprising question.",
+      "evidence_segment_ids": [
+        1,
+        2
+      ],
+      "scores": null,
+      "review_status": "pending"
+    }
+  ]
+}
