@@ -9,7 +9,7 @@
 ```text
 [input/stream.mp4] ────────────────────────┐
     │                                      │
-    ├── Transcript Service (v0.1)          ├── Audio Feature Service (planned)
+    ├── Transcript Service (v0.1)          ├── Audio Feature Service (v0.3)
     │       │                              │           │
     │       └── transcript.json            └── audio_features.json
     │                       │                    │
@@ -38,7 +38,7 @@
 |---|---|---|---|
 | Transcription | 本機影音 | 帶時間戳逐字稿 JSON / SRT | v0.1 已完成 |
 | Text-based Clip Selection | JSON / SRT | 文字線索候選事件、三輪 Prompt 實驗輸入 | v0.2 已完成本機基準；LLM 自動執行未實作 |
-| Audio Analysis | 音軌 | Audio Features | v0.3 planned |
+| Audio Analysis | 第一個本機音軌 | RMS / dBFS、低音量區間、週期性音高 JSON | v0.3 已完成；非語音／情緒／聲音事件分類器 |
 | Event Segmentation | 台詞 + 聲音特徵 | Events | v0.4 planned |
 | Three-round Selection | 事件 + 前後文 | Candidates | v0.4 planned |
 | Review | Candidates + 影音 | 人工標記 | v0.5 planned |

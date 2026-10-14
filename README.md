@@ -4,7 +4,7 @@
 >
 > 以日文 VTuber 長直播為輸入，逐步建立「轉錄 → 聲音分析 → 事件分段 → 三輪選片 → 人工審核 → Shorts 輸出 → 成效回饋」的可擴充系統。
 
-**專案狀態：v0.2.0 — Transcript-only Selection Baseline**。提供日文轉錄、JSON / SRT 輸入的本機候選事件搜尋、三輪 Prompt 匯出與事件／候選格式驗證。三輪 LLM 自動執行、聲音分析、影片渲染及平台 API 尚未實作；見 [開發路線圖](docs/roadmap.md)。
+**專案狀態：v0.3.0 — Physical Audio Features**。提供日文轉錄、純文字事件搜尋、三輪 Prompt 匯出，以及本機 RMS 音量、低音量停頓與週期性音高分析。聲音與文字的選片整合、三輪 LLM 自動執行、影片渲染及平台 API 尚未實作；見 [開發路線圖](docs/roadmap.md)。
 
 ## 目標
 
@@ -64,6 +64,8 @@ vtuber-shorts validate-transcript 驗證現有 JSON 格式與時間戳
 vtuber-shorts discover-events     從 JSON / SRT 搜尋文字線索候選事件
 vtuber-shorts prepare-prompts     匯出三輪 Prompt、schema 與重疊逐字稿分塊
 vtuber-shorts validate-selection  驗證 events / candidates JSON
+vtuber-shorts analyze-audio       量測音量、低音量區間與週期性音高
+vtuber-shorts validate-audio      驗證聲學特徵 JSON
 ```
 
 執行 `vtuber-shorts transcribe --help` 可看可用參數。預設日文 `language=ja`，可加 `--vad-filter` 啟用可選 VAD，或用 `--overwrite` 覆寫既有輸出。時間戳單位為**相對原始影音開頭的秒數**。
@@ -98,12 +100,46 @@ SRT 來源沒有完整媒體時長，匯入時以最後一筆字幕的結束時�
 `source_media` 使用 SRT 檔名。字幕序號會重新編成唯一段落 ID；所有分析保留原始秒數。
 新指令預設拒絕覆寫輸出，加 `--overwrite` 可覆寫，但禁止輸出覆蓋輸入。
 
+## v0.3 聲學特徵分析
+
+不需要重新轉錄；直接讀取原始影片。更新套件後，先分析前 60 秒：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[audio,dev]"
+.\.venv\Scripts\vtuber-shorts.exe analyze-audio --input "input\livestream.mp4" --output "data\livestream\audio_features.preview.json" --max-seconds 60
+.\.venv\Scripts\vtuber-shorts.exe validate-audio --input "data\livestream\audio_features.preview.json"
+```
+
+確認預覽後，分析整部影片：
+
+```powershell
+.\.venv\Scripts\vtuber-shorts.exe analyze-audio --input "input\livestream.mp4" --output "data\livestream\audio_features.json"
+.\.venv\Scripts\vtuber-shorts.exe validate-audio --input "data\livestream\audio_features.json"
+```
+
+若輸出已存在，重跑加 `--overwrite`。分析開始及每約 60 秒原始音訊進度會印訊息。
+音訊採串流解碼；特徵列表留到結束才寫 JSON，尚無斷點續跑。
+預設第一個音軌、16 kHz 單聲道、每 1 秒一窗，保留原始影音時間戳。
+末窗及時間戳缺口前後可能較短；缺口不補成靜音。
+`--max-seconds` 是原始時間軸截止點，省略則分析全部可解碼音訊。
+
+- `rms`／`rms_dbfs`：振幅與 dBFS，未做音量正規化；數位靜音的 dBFS 為 `null`。
+- `pauses`：40 ms 分幀低音量區間，預設低於 -40 dBFS、至少 0.3 秒。
+  不是已驗證的說話停頓；音樂與遊戲聲可能遮蔽真正停頓。
+- `pitch_median_hz`：約 60–600 Hz 的週期性音高，證據不足為 `null`；
+  樂器、多人聲及倍頻可能造成誤差，不能當作本人聲線或情緒的確定測量。
+
+可用 `--window-seconds`、`--silence-dbfs`、`--min-pause-seconds` 調整設定；
+`--no-pitch` 跳過音高計算。方法、套件版本、單位與門檻都記錄在輸出內。
+此版產出獨立聲學資料，尚未改變 `discover-events` 的文字選片結果。
+欄位與限制見 [資料格式](docs/data-contracts.md)。
+
 ## 預計架構（未實作部分為設計目標）
 
 ```text
 Local MP4
   ├─ Transcription (v0.1 ✅)
-  └─ Audio Analysis (planned)
+  └─ Physical Audio Analysis (v0.3 ✅)
           ↓
     Event Segmentation (planned)
           ↓

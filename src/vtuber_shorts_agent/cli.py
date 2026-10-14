@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .contracts import validate_selection, validate_transcript
+from .audio import analyze_audio
+from .contracts import validate_audio_features, validate_selection, validate_transcript
 from .io_utils import read_json, write_json
 from .prompting import prepare_prompts
 from .selection import discover_events, load_transcript
@@ -50,12 +51,43 @@ def build_parser() -> argparse.ArgumentParser:
     selection.add_argument("--input", type=Path, required=True)
     selection.add_argument("--kind", choices=("events", "candidates"), default="candidates")
     selection.add_argument("--transcript", type=Path, help="Optional JSON/SRT evidence source")
+    audio = commands.add_parser("analyze-audio", help="Measure RMS, low-energy pauses and pitch")
+    audio.add_argument("--input", type=Path, required=True)
+    audio.add_argument("--output", type=Path, required=True)
+    audio.add_argument("--window-seconds", type=float, default=1)
+    audio.add_argument("--silence-dbfs", type=float, default=-40)
+    audio.add_argument("--min-pause-seconds", type=float, default=0.3)
+    audio.add_argument("--no-pitch", action="store_true")
+    audio.add_argument("--max-seconds", type=float, help="Preview end on original timeline")
+    audio.add_argument("--overwrite", action="store_true")
+    validate_audio = commands.add_parser("validate-audio", help="Validate audio feature JSON")
+    validate_audio.add_argument("--input", type=Path, required=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "validate-audio":
+            data = read_json(args.input)
+            validate_audio_features(data)
+            print(f"Valid audio features: {len(data['windows'])} windows")
+            return 0
+        if args.command == "analyze-audio":
+            if args.input.resolve() == args.output.resolve():
+                raise ValueError("Input and output paths must be different")
+            if args.output.exists() and not args.overwrite:
+                raise FileExistsError(f"Output exists: {args.output} (use --overwrite)")
+            print("Analyzing audio (local streaming decode)...", flush=True)
+            data = analyze_audio(
+                args.input, window_seconds=args.window_seconds, silence_dbfs=args.silence_dbfs,
+                min_pause_seconds=args.min_pause_seconds, pitch_enabled=not args.no_pitch,
+                max_seconds=args.max_seconds,
+                progress=lambda seconds: print(f"Analyzed through {seconds:.1f}s", flush=True),
+            )
+            write_json(args.output, data)
+            print(f"Saved: {args.output} ({len(data['windows'])} windows)")
+            return 0
         if args.command == "validate-transcript":
             data = read_json(args.input)
             validate_transcript(data)

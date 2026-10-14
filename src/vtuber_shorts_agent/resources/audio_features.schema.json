@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Physical audio features 1.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source_media",
+    "duration_seconds",
+    "created_at_utc",
+    "generated_by",
+    "analysis",
+    "feature_definitions",
+    "windows",
+    "pauses"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1"
+    },
+    "source_media": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "analysis": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "feature_definitions": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "windows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "rms",
+          "rms_dbfs",
+          "pitch_median_hz",
+          "pitch_periodicity",
+          "voiced_fraction",
+          "low_energy_fraction",
+          "speech_detected",
+          "laughter_probability"
+        ],
+        "properties": {
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "rms": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rms_dbfs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pitch_median_hz": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 60,
+            "maximum": 600
+          },
+          "pitch_periodicity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "voiced_fraction": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "low_energy_fraction": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "speech_detected": {
+            "type": "null"
+          },
+          "laughter_probability": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    "pauses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    }
+  }
+}

@@ -23,9 +23,42 @@
 
 注意：Whisper 類型的時間戳是**近似估計**，實際字幕輸出前仍需檢查。
 
-## planned — audio_features.json
+## v0.3 — audio_features.json（schema 1.1）
 
-見 `examples/audio_features.example.json`：時窗包含單位、數值、資料來源、模型和信心度。不能把任意 0.8 當作可跨模型比較的「可愛程度」。聲音事件模型尚未整合，此例只示範結構。
+原先 `1.0` 是未實作提案；新增必要時長、分析設定、版本與停頓欄位，
+音訊格式升為 `1.1`，其他格式維持 `1.0`。舊音訊提案需重新生成。
+範例為合成 200 Hz 正弦波與靜音的實際分析，非直播資料。
+
+頂層包含 `source_media`（僅檔名）、`duration_seconds`（分析到的原始時間上限，
+不是完整影音時長保證）、`created_at_utc`、`generated_by="physical-audio-v1"`、
+`analysis`、`feature_definitions`、`windows`、`pauses`。
+`analysis` 記錄解碼器／NumPy 版本、16 kHz 單聲道、音軌索引、時窗、
+低音量門檻、最短停頓、預覽上限與音高方法設定。
+使用 [PyAV AudioResampler](https://pyav.org/docs/stable/api/audio.html#audio-resamplers)
+串流解碼，以 frame PTS 減去容器起始時間，保留原始影音相對秒數。
+不使用 VAD 壓縮時間。時間戳缺失或倒退回報錯誤，缺口保留為未量測區間，
+不偽造靜音；音軌起始延遲仍保留。
+
+| 欄位 | 意義／單位 |
+|---|---|
+| `start/end` | 原始秒數，末窗或缺口邊緣可能較短 |
+| `rms` | 重採樣單聲道線性振幅，不做音量正規化 |
+| `rms_dbfs` | 20 log10(RMS)，數位零為 null；不是 LUFS |
+| `pitch_median_hz` | 正規化自相關週期性幀中位數 Hz；不足為 null |
+| `pitch_periodicity` | 自相關相似度 0–1，不是語音或情緒機率 |
+| `voiced_fraction` | 通過週期性檢查的幀比例，不保證是人聲；停用 pitch 為 null |
+| `low_energy_fraction` | 低於門檻的分幀樣本比例 |
+| `speech_detected/laughter_probability` | 未量測，固定 null |
+
+音高以 40 ms 分幀、搜尋約 60–600 Hz，自相關峰至少 0.85、
+窗內至少半數幀通過才填音高；這些是篩選門檻，不是準確率保證。
+背景音樂、混音、多人聲與倍頻可能誤判，低音量或不規則發聲可能略過。
+`pauses` 是低音量連續區間 `{start, end}`，預設 -40 dBFS、至少 0.3 秒；
+跨時窗合併，但不跨未量測缺口，不代表任何心理狀態。
+
+schema 位於 `src/vtuber_shorts_agent/resources/audio_features.schema.json`。
+`validate-audio` 另檢查時間順序、非重疊、時長上限、有限數值、
+音高／比例範圍與未量測欄位。尚未與逐字稿或選片排名整合。
 
 ## v0.2 — events.json
 

@@ -6,7 +6,7 @@
 |---|---|---|
 | v0.1 | ✅ scaffold + transcript CLI | MP4 可轉為 JSON / SRT；格式驗證、單元測試、CI |
 | v0.2 | ✅ transcript-only baseline | SRT / JSON 文字線索候選事件搜尋；三輪 prompt 初版與重疊分塊匯出；事件／候選 JSON schema 與驗證。尚未自動執行 LLM |
-| v0.3 | planned | 基本聲學特徵：RMS、停頓、pitch（可靠時）、時窗；保留模型/單位 |
+| v0.3 | ✅ physical audio features | 串流 RMS / dBFS、低音量停頓、週期性音高（不足時 null）、原始時間戳、方法／版本／單位；CLI 與驗證 |
 | v0.4 | planned | 事件分段、文字與聲音特徵整合、三輪比較和候選片段排序 |
 | v0.5 | planned | 候選片段預覽、核准/拒絕、標籤與原因記錄 |
 | v0.6 | planned | FFmpeg 準確切片、日文字幕、可設定 9:16 布局 |

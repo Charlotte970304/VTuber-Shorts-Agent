@@ -6,6 +6,59 @@ from typing import Any
 SCHEMA_VERSION = "1.0"
 
 
+def validate_audio_features(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != "1.1":
+        raise ValueError("Unsupported audio schema_version (expected '1.1')")
+    for field in ("source_media", "generated_by", "created_at_utc"):
+        if not isinstance(payload.get(field), str) or not payload[field].strip():
+            raise ValueError(f"{field} must be a non-empty string")
+    for field in ("analysis", "feature_definitions"):
+        if not isinstance(payload.get(field), dict) or not payload[field]:
+            raise ValueError(f"{field} must be a non-empty object")
+    duration = _finite_number(payload.get("duration_seconds"), "duration_seconds")
+    if duration <= 0:
+        raise ValueError("duration_seconds must be positive")
+    for collection in ("windows", "pauses"):
+        rows = payload.get(collection)
+        if not isinstance(rows, list) or collection == "windows" and not rows:
+            raise ValueError(f"Invalid {collection} array")
+        previous_end = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError(f"{collection} entries must be objects")
+            start = _finite_number(row.get("start"), "start")
+            end = _finite_number(row.get("end"), "end")
+            if not previous_end <= start < end <= duration:
+                raise ValueError(f"Invalid {collection} time range")
+            previous_end = end
+            if collection == "pauses":
+                continue
+            rms = _finite_number(row.get("rms"), "rms")
+            if rms < 0:
+                raise ValueError("rms must be nonnegative")
+            for field in ("rms_dbfs", "pitch_median_hz", "pitch_periodicity", "voiced_fraction",
+                          "low_energy_fraction", "speech_detected", "laughter_probability"):
+                if field not in row:
+                    raise ValueError(f"Missing {field}")
+                value = row[field]
+                if field in ("speech_detected", "laughter_probability"):
+                    if value is not None:
+                        raise ValueError(f"{field} is unmeasured and must be null")
+                elif value is not None:
+                    number = _finite_number(value, field)
+                    if field == "pitch_median_hz" and not 60 <= number <= 600:
+                        raise ValueError("Pitch must be within 60–600 Hz")
+                    if field in ("pitch_periodicity", "voiced_fraction", "low_energy_fraction"):
+                        if not 0 <= number <= 1:
+                            raise ValueError(f"{field} must be within 0–1")
+            if row["low_energy_fraction"] is None:
+                raise ValueError("low_energy_fraction cannot be null")
+            if (rms == 0) != (row["rms_dbfs"] is None):
+                raise ValueError("rms_dbfs must be null only for zero RMS")
+            if (row["pitch_median_hz"] is None) != (row["pitch_periodicity"] is None):
+                raise ValueError("Pitch and periodicity must both be measured or null")
+
+
 def _finite_number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field} must be a number")
